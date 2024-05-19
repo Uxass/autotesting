@@ -8,6 +8,10 @@ async function lambdaTest() {
     let driver = await new Builder().forBrowser('chrome').build();
     try {
         await driver.get("https://lambdatest.github.io/sample-todo-app/");
+        let titleTagText = await driver.getTitle();
+        assert.equal(titleTagText, "Sample page - lambdatest.com");
+
+        
         await driver.manage().window().maximize();
         await driver.sleep(1000); 
 
@@ -23,7 +27,6 @@ async function lambdaTest() {
             await driver.findElement(By.name("li" + i)).click();
             remaining--;
 
-            // Reduced wait after clicking
             await driver.sleep(500);
 
             itemClass = await item.getAttribute("class");
@@ -31,7 +34,7 @@ async function lambdaTest() {
         }
 
         await driver.findElement(By.id("sampletodotext")).sendKeys("New Item");
-        await driver.sleep(1000); // Wait for input
+        await driver.sleep(1000); 
         await driver.findElement(By.id("addbutton")).click();
 
         let item = await driver.findElement(By.xpath("//input[@name='li6']/following-sibling::span"));
