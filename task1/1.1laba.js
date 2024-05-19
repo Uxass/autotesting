@@ -1,102 +1,78 @@
-const { Builder, By } = require('selenium-webdriver');
 const assert = require('assert');
+const { Builder, Browser, By} = require('selenium-webdriver');
 
-class Page {
-   constructor(driver) {
-       this.driver = driver;
-   }
+let driver = new Builder().forBrowser(Browser.CHROME).build();
 
-   async findElementByXPath(xpath) {
-       return await this.driver.findElement(By.xpath(xpath));
-   }
+let total = 5,
+    remaining = 5; 
 
-   async clickElementByXPath(xpath) {
-       let element = await this.findElementByXPath(xpath);
-       await element.click();
-   }
+async function lambdaTest() {
+    try {
+        await driver.get("https://lambdatest.github.io/sample-todo-app/");
 
-   async findElementById(id) {
-       return await this.driver.findElement(By.id(id));
-   }
+        await driver.manage().window().maximize();
+
+        await driver.sleep(2000);
+
+        let header = await driver.findElement(By.className("ng-binding"));
+        let headerText = await header.getText();
+        assert.equal(headerText, "5 of 5 remaining");
+
+        await driver.sleep(1000);
+
+        for (let i = 1; i <= total; i++) {
+
+            let remainingElem = driver.findElement(By.xpath("//span[@class='ng-binding']"));
+            let text = await remainingElem.getText();
+
+            let expectedText = `${remaining} of ${total} remaining`;
+            assert.equal(text, expectedText);
+
+            let item = await driver.findElement(By.xpath(`//input[@name='li${i}']/following-sibling::span`));
+
+            let itemClass = await item.getAttribute("class");
+            assert.equal(itemClass, "done-false");
+
+            await driver.findElement(By.name("li" + i)).click();
+            remaining--;
+
+            await driver.sleep(1000);
+
+            itemClass = await item.getAttribute("class");
+            assert.equal(itemClass, "done-true");
+        } 
+
+        await driver.findElement(By.id("sampletodotext")).sendKeys("Some new cool value");
+        await driver.sleep(1000);
+
+        await driver.findElement(By.id("addbutton")).click();
+
+        let item = await driver.findElement(By.xpath("//input[@name='li6']/following-sibling::span"));
+        let itemText = await item.getText();
+        let itemClass = await item.getAttribute("class");
+
+        assert.equal(itemText, "Some new cool value");
+        assert.equal(itemClass, "done-false");
+
+        await driver.sleep(1000);
+
+        await driver.findElement(By.name("li6")).click();
+
+        itemClass = await item.getAttribute("class");
+        assert.equal(itemClass, "done-true");
+
+        await driver.sleep(3000);
+
+    } catch(err) {
+
+        driver.takeScreenshot().then(function (image) {
+            require("fs").writeFileSync('screenshot.jpg', image, 'base64')
+        })
+
+        console.error("Тест упал по причине %s", err);
+    } finally {
+        await driver.quit();
+    }
 }
 
-class TodoAppPage extends Page {
-   constructor(driver) {
-       super(driver);
-       this.total = 5;
-       this.remaining = 5;
-   }
-
-   async open() {
-       await this.driver.get("https://lambdatest.github.io/sample-todo-app/");
-       await this.driver.manage().window().maximize();
-   }
-
-   async verifyPageTitle() {
-       let pageTitleElement = await this.findElementByXPath(`//h2`);
-       let pageTitle = await pageTitleElement.getText();
-       assert.equal(pageTitle, "LambdaTest Sample App", "Заголовок страницы не соответствует ожидаемому");
-   }
-
-   async verifyRemainingTasks() {
-       let textElement = await this.findElementByXPath(`//span[contains(@class, 'ng-binding')]`);
-       let text = await textElement.getText();
-       assert.equal(text, `${this.remaining} of ${this.total} remaining`);
-   }
-
-   async clickFirstTask() {
-       let firstListItem = await this.findElementByXPath(`//ul/li[1]`);
-       await firstListItem.click();
-   }
-
-   async completeAllTasks() {
-       for (let i = 1; i <= this.total; i++) {
-           await this.clickElementByXPath(`//ul/li[${i}]/input`);
-           await this.driver.sleep(500); 
-       }
-   }
-
-   async addNewTask() {
-       await (await this.findElementById("sampletodotext")).sendKeys("Sixth Item");
-       await (await this.findElementById("addbutton")).click();
-       this.total++;
-       this.remaining++;
-       await this.driver.sleep(1000); 
-   }
-
-   async verifyNewItem() {
-       let newItem = await this.findElementByXPath("//ul/li[last()]");
-       await newItem.click();
-   }
-
-   async takeScreenshot() {
-       let image = await this.driver.takeScreenshot();
-       require('fs').writeFileSync('screenshot_error.png', image, 'base64');
-   }
-}
-
-async function Task1Test() {
-   let driver;
-   try {
-       driver = await new Builder().forBrowser('chrome').build();
-       let page = new TodoAppPage(driver);
-       await page.open();
-       await page.verifyPageTitle();
-       await page.verifyRemainingTasks();
-       await page.clickFirstTask();
-       await page.completeAllTasks();
-       await page.addNewTask();
-       await page.verifyNewItem();
-       console.log('Всё работает');
-   } catch (err) {
-       let page = new TodoAppPage(driver);
-       await page.takeScreenshot();
-       console.error('Тест сломался по причине: %s', err);
-   } finally {
-       if (driver) {
-           await driver.quit();
-       }
-   }
-}
-
-Task1Test();
+lambdaTest();
