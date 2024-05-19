@@ -1,40 +1,69 @@
-export class BasePage {
-  constructor(driver) {
-    this.driver = driver;
-  }
+const {Builder, Browser, until} = require('selenium-webdriver')
 
-  async goToUrl(url) {
-    await this.driver.get(url);
-  }
+class BasePage {
+    async goToUrl(url) {
+        global.driver = new Builder().forBrowser(Browser.FIREFOX).build();
+        driver.manage().setTimeouts({implicit: 5000}); // Если за 5 сек элемент не будет найден, то тест упадет
+        await driver.get(url);
+    }
 
-  async enterText(locator, textToEnter) {
-    const element = await this.driver.findElement(locator);
-    await element.sendKeys(textToEnter);
-  }
+    async findElement(locator) {
+        return await driver.findElement(locator)
+    }
 
-  async click(locator) {
-    const element = await this.driver.findElement(locator);
-    await element.click();
-  }
+    async getClassOfElement(locator) {
+        return await driver.findElement(locator).getAttribute('class')
+    }
 
-  async getText(locator) {
-    const element = await this.driver.findElement(locator);
-    return await element.getText();
-  }
+    async getTextOfElement(locator) {
+        return await driver.findElement(locator).getText()
+    }
 
-  getDateTimeString() {
-    const date = new Date();
-    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}-${String(date.getHours()).padStart(2, '0')}-${String(date.getMinutes()).padStart(2, '0')}-${String(date.getSeconds()).padStart(2, '0')}`;
-  }
+    async enterText(locator, textToEnter) {
+        await driver.findElement(locator).sendKeys(textToEnter);
+    }
 
-  async saveScreenshot(fileName) {
-    const date = this.getDateTimeString();
-    const image = await this.driver.takeScreenshot();
-    fs.writeFileSync(`./screenshots/lab2/error_${fileName}_${date}.png`, image, 'base64');
-  }
+    async click(locator) {
+        await driver.findElement(locator).click();
+    }
 
-  async closeBrowser() {
-    await this.driver.sleep(1000);
-    await this.driver.quit();
-  }
+    async closeBrowser() {
+        await driver.sleep(1000);
+        await driver.quit()
+    }
+
+    async getPageTitle() {
+        return await driver.getTitle()
+    }
+
+    async isElementOnPage(locator) {
+        return await driver.findElement(locator).isEmpty()
+    }
+
+    async saveScreenshot(fileName) {
+        driver.takeScreenshot().then(function(image) {
+            require('fs').writeFileSync("./images/task2/" + fileName, image, 'base64')
+        })
+    }
+
+    async waitUntil(condituion) {
+        await driver.wait(condituion)
+    }
+
+    async SwitchToNextTab() {
+        let originalTab = await driver.getWindowHandle();
+        const windows = await driver.getAllWindowHandles();
+        
+        windows.forEach(async handle => {
+            if (handle !== originalTab) {
+                await driver.switchTo().window(handle);
+            }
+        });
+    }
+
+    async sleep(milliseconds) {
+        await driver.sleep(milliseconds)
+    }
 }
+
+module.exports = BasePage
